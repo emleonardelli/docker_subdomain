@@ -1,3 +1,7 @@
+# Hi!
+
+This repo contains the basic structure to create a project in production with two subdomains in Laravel with SSL.
+
 # Edit the docker-compose
 
 - Change the <user> and <user_uid> for the linux user
