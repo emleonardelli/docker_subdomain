@@ -1,0 +1,137 @@
+version: '3.3'
+services:
+  be_main:
+    build:
+      args:
+        user: user
+        uid: 1000
+      context: ./main/src
+      dockerfile: Dockerfile
+    container_name: <site>_backend_main
+    restart: always
+    environment:
+      CONTAINER_ROLE: backend
+      LARAVEL_APP_URL: ${LARAVEL_APP_URL}
+      LARAVEL_APP_NAME: ${LARAVEL_APP_NAME}
+      LARAVEL_APP_ENV: ${LARAVEL_APP_ENV}
+      LARAVEL_APP_KEY: ${LARAVEL_APP_KEY}
+      LARAVEL_APP_DEBUG: ${LARAVEL_APP_DEBUG}
+      DB_PASSWORD: "${DB_PASS}"
+      DB_USER: "${DB_USER}"
+      DB_NAME: "${DB_NAME}"
+      DB_HOST: "${DB_HOST}"
+      DB_PORT: "${DB_PORT}"
+      TIMEZONE: "${TIMEZONE}"
+      RECAPTCHAV3_SITEKEY: "${RECAPTCHAV3_SITEKEY}"
+      RECAPTCHAV3_SECRET: "${RECAPTCHAV3_SECRET}"
+      MAIL_DRIVER: "${MAIL_DRIVER}"
+      MAIL_MAILER: "${MAIL_MAILER}"
+      MAIL_HOST: "${MAIL_HOST}"
+      MAIL_PORT: "${MAIL_PORT}"
+      MAIL_USERNAME: "${MAIL_USERNAME}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD}"
+      MAIL_ENCRYPTION: "${MAIL_ENCRYPTION}"
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME}"
+      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS}"
+    working_dir: /var/www/main/
+    volumes:
+      - ./main/src:/var/www/main
+    networks:
+      - <site>_network
+    depends_on:
+      - db
+
+  be_develop:
+    build:
+      args:
+        user: user
+        uid: 1000
+      context: ./develop/src
+      dockerfile: Dockerfile
+    container_name: <site>_backend_develop
+    restart: always
+    environment:
+      CONTAINER_ROLE: backend
+      LARAVEL_APP_URL: ${DEV_LARAVEL_APP_URL}
+      LARAVEL_APP_NAME: ${DEV_LARAVEL_APP_NAME}
+      LARAVEL_APP_ENV: ${DEV_LARAVEL_APP_ENV}
+      LARAVEL_APP_KEY: ${DEV_LARAVEL_APP_KEY}
+      LARAVEL_APP_DEBUG: ${DEV_LARAVEL_APP_DEBUG}
+      DB_PASSWORD: "${DEV_DB_PASS}"
+      DB_USER: "${DEV_DB_USER}"
+      DB_NAME: "${DEV_DB_NAME}"
+      DB_HOST: "${DEV_DB_HOST}"
+      DB_PORT: "${DEV_DB_PORT}"
+      TIMEZONE: "${DEV_TIMEZONE}"
+      RECAPTCHAV3_SITEKEY: "${DEV_RECAPTCHAV3_SITEKEY}"
+      RECAPTCHAV3_SECRET: "${DEV_RECAPTCHAV3_SECRET}"
+      MAIL_DRIVER: "${DEV_MAIL_DRIVER}"
+      MAIL_MAILER: "${DEV_MAIL_MAILER}"
+      MAIL_HOST: "${DEV_MAIL_HOST}"
+      MAIL_PORT: "${DEV_MAIL_PORT}"
+      MAIL_USERNAME: "${DEV_MAIL_USERNAME}"
+      MAIL_PASSWORD: "${DEV_MAIL_PASSWORD}"
+      MAIL_ENCRYPTION: "${DEV_MAIL_ENCRYPTION}"
+      MAIL_FROM_NAME: "${DEV_MAIL_FROM_NAME}"
+      MAIL_FROM_ADDRESS: "${DEV_MAIL_FROM_ADDRESS}"
+    working_dir: /var/www/develop/
+    volumes:
+      - ./develop/src:/var/www/develop
+    networks:
+      - <site>_network
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    restart: always
+    container_name: '<site>_db'
+    environment:
+      MYSQL_DATABASE: '${DB_NAME}'
+      MYSQL_USER: '${DB_USER}'
+      MYSQL_PASSWORD: '${DB_PASS}'
+      MYSQL_ROOT_PASSWORD: '${DB_PASS_ROOT}'
+    ports:
+      - 3306:3306
+    expose:
+      - 3306
+    volumes:
+        - ./data/mysql:/var/lib/mysql
+    networks:
+        - <site>_network
+
+  pma:
+    image: phpmyadmin/phpmyadmin
+    container_name: '<site>_pma'
+    restart: always
+    links:
+      - db
+    ports:
+      - 8080:80
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    depends_on:
+      - db
+    networks:
+      - <site>_network
+
+  reverse-proxy:
+    image: nginx:1.17-alpine
+    container_name: <site>_proxy
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./main/src:/var/www/main
+      - ./develop/src:/var/www/develop
+      - ./data/nginx/ssl:/var/sslKey
+      - ./data/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - <site>_network
+
+networks:
+  <site>_network:
+    driver: bridge
